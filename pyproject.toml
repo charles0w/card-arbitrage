@@ -1,0 +1,23 @@
+[project]
+name = "card-arbitrage"
+version = "0.0.1"
+description = "Find undervalued Pokemon and One Piece TCG cards on eBay/TCGPlayer."
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]  # ruff format handles line length
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --strict-markers"
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+warn_unused_ignores = true

@@ -1,0 +1,33 @@
+# Secrets
+.env
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Data + caches (rebuild from API)
+data/cache/
+data/catalog/*.parquet
+data/runs/
+
+# Generated outputs
+opportunities/
+!opportunities/_template.md
+!opportunities/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
