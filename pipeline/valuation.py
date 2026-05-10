@@ -21,7 +21,6 @@ CONDITION_MULT = {
     "DMG": 0.30,
 }
 
-# Common seller-stated condition strings -> normalized code.
 CONDITION_NORMALIZE = {
     "mint": "M",
     "near mint": "NM",
@@ -65,11 +64,7 @@ class Sale:
 
 
 def recency_weighted_avg(sales: list[Sale], halflife_days: float = 21.0) -> float:
-    """Weighted average where older sales count exponentially less.
-
-    Default halflife = 3 weeks. For a stable card the result converges to a flat
-    average; for a card mid-spike the recency-weighted number lags less.
-    """
+    """Weighted average where older sales count exponentially less."""
     if not sales:
         return 0.0
     now = datetime.now(timezone.utc)
@@ -112,17 +107,8 @@ def estimate_market_value(
     tcg: CompTCGPlayerMarket | None = None,
     ebay: CompEbaySold | None = None,
 ) -> tuple[float, float]:
-    """Return (estimated_value, confidence_0_to_1).
-
-    Confidence sums weights from up-to-three sources:
-    - PriceCharting: 0.4 if n>=10 and recency<=90d
-    - TCGPlayer market: 0.3 always (when present)
-    - eBay sold: 0.3 if n>=5 and recency<=30d
-
-    Skip any source that fails its quality filter. If no source qualifies,
-    return (0.0, 0.0) -- caller should treat this as "no comp; skip".
-    """
-    contribs: list[tuple[float, float]] = []  # (value, weight)
+    """Return (estimated_value, confidence_0_to_1)."""
+    contribs: list[tuple[float, float]] = []
 
     if pc and pc.n >= 10 and pc.recency_days <= 90 and pc.avg > 0:
         contribs.append((pc.avg, 0.4))
@@ -137,6 +123,27 @@ def estimate_market_value(
     total_w = sum(w for _, w in contribs)
     value = sum(v * w / total_w for v, w in contribs)
     return value, total_w
+
+
+# ---------- Shipping ----------
+
+
+def default_shipping_for_price(listing_price: float) -> tuple[float, float]:
+    """Per-tier shipping defaults for TCG singles.
+
+    TCG sellers ship cheap cards via Plain White Envelope (PWE) — about $2 each
+    way once you account for postage + sleeve + envelope. Mid-priced cards get
+    a bubble mailer with tracking (~$3.50). High-value cards get secure
+    shipping with insurance (~$5+).
+
+    The compute_edge defaults (5.0 each way) are calibrated for the high-value
+    tier; use this helper from the scout to pick the right tier per listing.
+    """
+    if listing_price < 30.0:
+        return (2.0, 2.0)
+    if listing_price < 100.0:
+        return (3.5, 3.5)
+    return (5.0, 5.0)
 
 
 # ---------- Edge computation ----------
@@ -176,13 +183,15 @@ def compute_edge(
 ) -> EdgeResult:
     """Compute the per-listing edge.
 
-    Mirrors the formula in valuation-model.md:
+    Mirrors valuation-model.md:
         edge_$ = market_value * (1 - sell_fee_pct)
-                 - listing_price - shipping_in - shipping_out
-                 - risk_buffer
+                 - listing_price - shipping_in - shipping_out - risk_buffer
+
+    Defaults assume high-value-card shipping. The scout calls
+    `default_shipping_for_price` to override these for cheap singles.
     """
     flagged: list[str] = []
-    risk_buffer_pct = 0.05  # default 5%
+    risk_buffer_pct = 0.05
     condition_adjusted = listing.seller_condition
 
     # Trustworthiness haircut.
@@ -193,11 +202,9 @@ def compute_edge(
         risk_buffer_pct = 0.12
         flagged.append("seller_low_feedback_pct")
 
-    # If trust is low, also haircut condition by one tier (NM -> LP, LP -> MP, ...).
     if "seller_low_feedback_count" in flagged:
         condition_adjusted = _downgrade_condition(listing.seller_condition)
         flagged.append("condition_haircut_low_feedback")
-        # Re-apply downgrade to estimated value.
         downgrade_mult = CONDITION_MULT[normalize_condition(condition_adjusted)] / max(
             CONDITION_MULT[normalize_condition(listing.seller_condition)], 1e-9
         )

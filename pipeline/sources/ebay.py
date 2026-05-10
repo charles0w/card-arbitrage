@@ -23,12 +23,12 @@ class EbayListing:
     listing_url: str
     title: str
     listing_price: float
-    seller_condition: str  # raw seller-stated string
+    seller_condition: str
     seller_feedback_count: int
     seller_feedback_pct: float
     photo_urls: list[str]
     is_auction: bool
-    end_time_iso: str | None  # populated from item detail call only
+    end_time_iso: str | None
 
 
 # ---------- public entry point ----------
@@ -46,9 +46,9 @@ def search_listings(
     """Search eBay for active listings in a category and price band.
 
     `use_stub`:
-        - True  -> return deterministic fake data (no API calls)
-        - False -> hit the real Browse API; raises if keys missing
-        - None  -> auto: real if both EBAY_* keys are set, else stub
+        - True  -> deterministic fake data (no API calls)
+        - False -> hit real Browse API; raises on missing keys
+        - None  -> auto: real if both EBAY_* keys set, else stub
     """
     if use_stub is None:
         use_stub = not _have_ebay_keys()
@@ -70,75 +70,129 @@ def search_listings(
 
 
 def _have_ebay_keys() -> bool:
-    """True if both EBAY_CLIENT_ID and EBAY_CLIENT_SECRET are set."""
     from pipeline.config import get_settings
-
     s = get_settings()
     return bool(s.ebay_client_id) and bool(s.ebay_client_secret)
 
 
-# ---------- stub ----------
+# ---------- stub data ----------
 
-
+# Stub listings calibrated to the 2026-04-28 market snapshot:
+#   - Pokemon Destined Rivals "Team Rocket's Houndoom" / "Cynthia's Roserade" / "Piplup"
+#     listed below TCGPlayer market by 25-35% -> should flag as opportunities
+#   - Prismatic Evolutions singles below the $10 minimum price floor -> filtered out
+#   - Mature comps (Charizard, Lugia) priced near market -> low/no edge
+#   - Bulk listing -> won't parse, dropped early
 def _stub_listings(price_min: float, price_max: float, limit: int) -> list[EbayListing]:
-    """Hand-crafted stub data exercising the valuation pipeline."""
     raw = [
+        # --- HIGH-EDGE Pokemon Destined Rivals (above $10 floor) ---
         EbayListing(
-            listing_id="ebay-stub-001",
-            listing_url="https://www.ebay.com/itm/STUB-001",
-            title="Charizard 4/102 Base Set Holo Rare",
-            listing_price=65.0,
+            listing_id="ebay-stub-dr-houndoom",
+            listing_url="https://www.ebay.com/itm/STUB-DR-HOUNDOOM",
+            title="Team Rocket's Houndoom Destined Rivals IR",
+            listing_price=11.50,
             seller_condition="Near Mint",
-            seller_feedback_count=1247,
-            seller_feedback_pct=99.6,
-            photo_urls=["https://stub.example/photos/001/1.jpg"],
+            seller_feedback_count=2480,
+            seller_feedback_pct=99.7,
+            photo_urls=["https://stub.example/photos/dr-houndoom/1.jpg"],
             is_auction=False,
             end_time_iso=None,
         ),
         EbayListing(
-            listing_id="ebay-stub-002",
-            listing_url="https://www.ebay.com/itm/STUB-002",
-            title="Lugia Neo Genesis 9/111 Holo",
+            listing_id="ebay-stub-dr-roserade",
+            listing_url="https://www.ebay.com/itm/STUB-DR-ROSERADE",
+            title="Cynthia's Roserade Destined Rivals Illustration Rare",
+            listing_price=10.25,
+            seller_condition="NM",
+            seller_feedback_count=842,
+            seller_feedback_pct=99.4,
+            photo_urls=["https://stub.example/photos/dr-roserade/1.jpg"],
+            is_auction=False,
+            end_time_iso=None,
+        ),
+        EbayListing(
+            listing_id="ebay-stub-dr-piplup",
+            listing_url="https://www.ebay.com/itm/STUB-DR-PIPLUP",
+            title="Piplup Destined Rivals Illustration Rare",
+            listing_price=12.80,
+            seller_condition="Near Mint",
+            seller_feedback_count=1247,
+            seller_feedback_pct=99.6,
+            photo_urls=["https://stub.example/photos/dr-piplup/1.jpg"],
+            is_auction=False,
+            end_time_iso=None,
+        ),
+        # --- BELOW $10 floor: Prismatic Evolutions Eeveelutions ---
+        EbayListing(
+            listing_id="ebay-stub-pre-sylveon",
+            listing_url="https://www.ebay.com/itm/STUB-PRE-SYLVEON",
+            title="Sylveon ex 41 Prismatic Evolutions Double Rare",
+            listing_price=2.75,
+            seller_condition="NM",
+            seller_feedback_count=512,
+            seller_feedback_pct=99.5,
+            photo_urls=[],
+            is_auction=False,
+            end_time_iso=None,
+        ),
+        # --- Mature Pokemon (Charizard) — small spread, no edge ---
+        EbayListing(
+            listing_id="ebay-stub-charizard",
+            listing_url="https://www.ebay.com/itm/STUB-CHARIZARD",
+            title="Charizard 4/102 Base Set Holo Rare",
+            listing_price=98.0,  # near the $107 estimated value -> no opportunity
+            seller_condition="Near Mint",
+            seller_feedback_count=1247,
+            seller_feedback_pct=99.6,
+            photo_urls=["https://stub.example/photos/charizard/1.jpg"],
+            is_auction=False,
+            end_time_iso=None,
+        ),
+        # --- Lugia (slight under-price, but small absolute edge) ---
+        EbayListing(
+            listing_id="ebay-stub-lugia",
+            listing_url="https://www.ebay.com/itm/STUB-LUGIA",
+            title="Lugia 9/111 Neo Genesis Holo",
             listing_price=35.0,
             seller_condition="Lightly Played",
             seller_feedback_count=82,
             seller_feedback_pct=99.0,
-            photo_urls=["https://stub.example/photos/002/1.jpg"],
+            photo_urls=["https://stub.example/photos/lugia/1.jpg"],
             is_auction=False,
             end_time_iso=None,
         ),
+        # --- One Piece: Luffy SR ---
         EbayListing(
-            listing_id="ebay-stub-003",
-            listing_url="https://www.ebay.com/itm/STUB-003",
+            listing_id="ebay-stub-op01-luffy",
+            listing_url="https://www.ebay.com/itm/STUB-OP01-LUFFY",
             title="Luffy SR OP-01 Romance Dawn",
             listing_price=12.0,
             seller_condition="NM",
-            seller_feedback_count=45,  # low — should trigger haircut
+            seller_feedback_count=45,  # low feedback - triggers haircut
             seller_feedback_pct=98.4,
             photo_urls=[],
             is_auction=False,
             end_time_iso=None,
         ),
+        # --- Bulk listing: won't parse, drops early ---
         EbayListing(
-            listing_id="ebay-stub-004",
-            listing_url="https://www.ebay.com/itm/STUB-004",
+            listing_id="ebay-stub-bulk",
+            listing_url="https://www.ebay.com/itm/STUB-BULK",
             title="Pokemon Card Lot — bulk 100 cards mixed sets",
             listing_price=22.0,
             seller_condition="LP",
             seller_feedback_count=3500,
             seller_feedback_pct=99.9,
-            photo_urls=["https://stub.example/photos/004/1.jpg"],
+            photo_urls=["https://stub.example/photos/bulk/1.jpg"],
             is_auction=False,
             end_time_iso=None,
         ),
     ]
-    in_band = [
-        l for l in raw if price_min <= l.listing_price <= price_max  # noqa: E741
-    ]
+    in_band = [l for l in raw if price_min <= l.listing_price <= price_max]
     return in_band[:limit]
 
 
-# ---------- real client (browseapi) ----------
+# ---------- real client ----------
 
 
 def _real_search(
@@ -149,17 +203,8 @@ def _real_search(
     limit: int,
     keywords: str | None,
 ) -> list[EbayListing]:
-    """Real eBay Browse API call via the `browseapi` library.
-
-    Notes:
-      - browseapi.execute() is synchronous; it manages its own event loop
-        internally. Don't wrap in asyncio.run().
-      - Filter syntax follows eBay's spec:
-            price:[<min>..<max>],priceCurrency:USD,buyingOptions:{FIXED_PRICE|AUCTION}
-      - Keywords (`q`) is optional — eBay requires *either* `q` OR `category_ids`.
-        We pass both when keywords are provided.
-    """
-    from browseapi import BrowseAPI  # local import so import cost is paid only when needed
+    """Real eBay Browse API call via the `browseapi` library."""
+    from browseapi import BrowseAPI
 
     from pipeline.config import get_settings
 
@@ -173,7 +218,7 @@ def _real_search(
             f"buyingOptions:{{FIXED_PRICE|AUCTION}}"
         ),
         "sort": "newlyListed",
-        "limit": min(limit, 200),  # eBay API cap is 200 per page
+        "limit": min(limit, 200),
     }
     if keywords:
         params["q"] = keywords
@@ -186,7 +231,7 @@ def _real_search(
 
     try:
         responses = api.execute("search", [params])
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception("ebay api call failed: %s", e)
         return []
 
@@ -208,20 +253,18 @@ def _real_search(
 
 
 def _map_response(resp) -> list[EbayListing]:
-    """Map a browseapi BrowseAPIResponse to our EbayListing dataclass."""
     items = getattr(resp, "itemSummaries", None) or []
     out: list[EbayListing] = []
     for it in items:
         try:
             out.append(_map_item(it))
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.warning("skipping item due to mapping error: %s (item_id=%s)", e, getattr(it, "itemId", "?"))
     logger.info("ebay: mapped %d/%d listings", len(out), len(items))
     return out
 
 
 def _map_item(it) -> EbayListing:
-    """Translate one ItemSummary to EbayListing."""
     price = getattr(it, "price", None)
     listing_price = float(getattr(price, "value", 0.0)) if price else 0.0
 
@@ -241,7 +284,6 @@ def _map_item(it) -> EbayListing:
     buying_options = getattr(it, "buyingOptions", None) or []
     is_auction = "AUCTION" in buying_options
 
-    # Prefer affiliate URL when present (lets future affiliate tracking work).
     listing_url = (
         getattr(it, "itemAffiliateWebUrl", None)
         or getattr(it, "itemWebUrl", None)
@@ -258,5 +300,5 @@ def _map_item(it) -> EbayListing:
         seller_feedback_pct=feedback_pct,
         photo_urls=photo_urls,
         is_auction=is_auction,
-        end_time_iso=None,  # only available on get_item, not in summary
+        end_time_iso=None,
     )

@@ -31,3 +31,4 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+pipeline/scout.py.bak

@@ -43,7 +43,7 @@ def scout_cmd(
     opps = scout(limit_per_search=limit, use_stub_apis=use_stub_apis)
 
     table = Table(title=f"Opportunities ({len(opps)})")
-    for col in ("Card", "Set", "Cond", "List $", "Mkt $", "Edge $", "Edge %", "Conf"):
+    for col in ("Card", "Set", "Cond", "List $", "Mkt $", "Spread", "Net $", "Conf"):
         table.add_column(col)
     for o in opps[:25]:
         table.add_row(
@@ -52,8 +52,8 @@ def scout_cmd(
             o.condition_adjusted,
             f"${o.listing_price:.2f}",
             f"${o.estimated_market_value:.2f}",
+            f"{o.gross_spread_pct*100:+.1f}%",
             f"${o.edge_dollars:+.2f}",
-            f"{o.edge_pct*100:+.1f}%",
             f"{o.estimated_market_value_confidence:.2f}",
         )
     console.print(table)
